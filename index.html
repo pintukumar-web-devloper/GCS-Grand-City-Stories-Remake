@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#080b12">
+  <meta name="description" content="GCS — Grand City Stories by PK Games">
+
+  <title>GCS — GRAND CITY STORIES</title>
+
+  <link rel="stylesheet" href="./styles.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module" src="./src/main.js"></script>
+</head>
+
+<body>
+
+  <!-- STUDIO INTRO -->
+  <section id="studio-intro" class="screen">
+    <div class="studio-logo">
+      <span>PK</span>
+      <h1>PK GAMES</h1>
+      <p>PRESENTS</p>
+    </div>
+  </section>
+
+  <!-- LOADING SCREEN -->
+  <section id="loading-screen" class="screen" hidden>
+    <div class="loading-content">
+      <h1>GCS</h1>
+      <p>ENTERING ANGEL VALLEY</p>
+      <div class="loading-track">
+        <div id="loading-progress"></div>
+      </div>
+      <span id="loading-status">INITIALIZING...</span>
+    </div>
+  </section>
+
+  <!-- MAIN MENU -->
+  <main id="main-menu" class="screen" hidden>
+    <header class="top-bar">
+      <div class="studio-name">PK GAMES ORIGINAL</div>
+      <div class="version">GCS • VERSION 1.0</div>
+    </header>
+
+    <section class="main-content">
+      <div class="city-label">WELCOME TO</div>
+      <h1 class="city-title">ANGEL<br>VALLEY</h1>
+
+      <div class="game-brand">
+        <span>GCS</span>
+        <h2>GRAND CITY STORIES</h2>
+        <p>THE CITY NEVER SLEEPS</p>
+      </div>
+
+      <nav class="main-buttons" aria-label="Main menu">
+        <button id="continue-button">CONTINUE</button>
+        <button id="new-game-button">NEW GAME</button>
+        <button id="game-modes-button">GAME MODES</button>
+        <button id="settings-button">SETTINGS</button>
+        <button id="social-button">SOCIAL CLUB</button>
+        <button id="quit-button">QUIT GAME</button>
+      </nav>
+    </section>
+
+    <footer class="main-footer">
+      CREATED BY PINTU KUMAR<br>
+      STUDIO: PK GAMES
+    </footer>
+  </main>
+
+  <!-- GAME MODE SELECTION -->
+  <section id="mode-select" class="screen" hidden>
+    <header class="mode-header">
+      <span>GCS • PK GAMES</span>
+      <h1>SELECT YOUR <span>WORLD</span></h1>
+      <p>CHOOSE YOUR WAY TO EXPERIENCE ANGEL VALLEY</p>
+    </header>
+
+    <div class="mode-grid">
+
+      <button class="mode-card" id="free-world">
+        <span class="mode-number">01 / OPEN WORLD</span>
+        <strong>FREE WORLD</strong>
+        <small>Explore Angel Valley</small>
+        <span class="play-label">PLAY NOW →</span>
+      </button>
+
+      <button class="mode-card" id="chor-police">
+        <span class="mode-number">02 / ACTION</span>
+        <strong>CHOR POLICE</strong>
+        <small>Choose your side</small>
+        <span class="play-label">PLAY NOW →</span>
+      </button>
+
+      <button class="mode-card" id="adventure">
+        <span class="mode-number">03 / STORY</span>
+        <strong>ADVENTURE</strong>
+        <small>Discover your story</small>
+        <span class="play-label">PLAY NOW →</span>
+      </button>
+
+      <button class="mode-card" id="multiplayer">
+        <span class="mode-number">04 / ONLINE</span>
+        <strong>MULTIPLAYER</strong>
+        <small>Play together</small>
+        <span class="play-label">PLAY NOW →</span>
+      </button>
+
+    </div>
+
+    <button id="back-to-menu">← BACK TO MAIN MENU</button>
+  </section>
+
+  <!-- GAME VIEW -->
+  <section id="game-screen" class="screen" hidden>
+    <div id="game-container"></div>
+
+    <div id="game-hud">
+      <div id="location-name">ANGEL VALLEY</div>
+      <button id="exit-world-button">EXIT WORLD</button>
+    </div>
+
+    <div id="game-message" role="status" hidden></div>
+  </section>
+
+  <!-- ERROR SCREEN -->
+  <section id="error-screen" class="screen" hidden>
+    <h1>GCS ERROR</h1>
+    <p id="error-message">Something went wrong.</p>
+    <button id="error-back-button">BACK TO MENU</button>
+  </section>
+
+</body>
+</html>
