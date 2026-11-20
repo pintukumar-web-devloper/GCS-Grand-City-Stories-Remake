@@ -1,304 +1,405 @@
 
-/* =========================================
-   GCS — GRAND CITY STORIES
-   PK GAMES
-   VEHICLE SYSTEM
-========================================= */
-
 import * as THREE from "three";
 
-const VEHICLE_SETTINGS = {
-  car: {
-    acceleration: 18,
-    maxSpeed: 55,
-    reverseSpeed: 18,
-    turnSpeed: 1.5,
-    wheelRadius: 0.38
-  },
+// ========================================
+// GCS — PLAYER & MOBILE CONTROL SYSTEM
+// PK GAMES
+// ========================================
 
-  bike: {
-    acceleration: 24,
-    maxSpeed: 75,
-    reverseSpeed: 12,
-    turnSpeed: 2.1,
-    wheelRadius: 0.48
-  }
-};
+export function createPlayer(scene, camera) {
+  const player = new THREE.Group();
 
-export function createVehicle(scene, type = "car", position = [0, 0, 0]) {
-  if (!["car", "bike"].includes(type)) {
-    throw new Error(`Unsupported vehicle type: ${type}`);
-  }
-
-  const settings = VEHICLE_SETTINGS[type];
-
-  const vehicle = new THREE.Group();
-  vehicle.name = type === "car" ? "GCS_CAR" : "GCS_BIKE";
-
-  const parts = new THREE.Group();
-  vehicle.add(parts);
-
+  // PLAYER BODY
   const bodyMaterial = new THREE.MeshStandardMaterial({
-    color: type === "car" ? 0x173c68 : 0xc52d27,
-    metalness: 0.55,
-    roughness: 0.35
-  });
-
-  const darkMaterial = new THREE.MeshStandardMaterial({
-    color: 0x171c24,
-    metalness: 0.2,
+    color: 0x263b50,
     roughness: 0.8
   });
 
-  const glassMaterial = new THREE.MeshStandardMaterial({
-    color: 0x263e50,
-    metalness: 0.35,
-    roughness: 0.2
+  const skinMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc58d68,
+    roughness: 0.85
   });
 
-  const lightMaterial = new THREE.MeshStandardMaterial({
-    color: 0xfff0c7,
-    emissive: 0xffd88a,
-    emissiveIntensity: 1.5
-  });
+  const body = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.42, 0.65, 4, 8),
+    bodyMaterial
+  );
 
-  const rearLightMaterial = new THREE.MeshStandardMaterial({
-    color: 0xc51c25,
-    emissive: 0x9d0710,
-    emissiveIntensity: 1
-  });
+  body.position.y = 1.05;
+  body.castShadow = true;
+  player.add(body);
 
-  const wheels = [];
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.27, 16, 12),
+    skinMaterial
+  );
 
-  function addBox(width, height, depth, material, x, y, z) {
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(width, height, depth),
-      material
-    );
+  head.position.y = 1.85;
+  head.castShadow = true;
+  player.add(head);
 
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    parts.add(mesh);
+  const legs = new THREE.Mesh(
+    new THREE.BoxGeometry(0.55, 0.65, 0.38),
+    new THREE.MeshStandardMaterial({ color: 0x17212c })
+  );
 
-    return mesh;
-  }
+  legs.position.y = 0.38;
+  legs.castShadow = true;
+  player.add(legs);
 
-  function addWheel(x, z, radius) {
-    const wheel = new THREE.Group();
-    wheel.position.set(x, radius, z);
+  player.position.set(0, 0, 0);
+  scene.add(player);
 
-    const tire = new THREE.Mesh(
-      new THREE.CylinderGeometry(
-        radius,
-        radius,
-        type === "car" ? 0.24 : 0.16,
-        20
-      ),
-      darkMaterial
-    );
+  // MOVEMENT STATE
+  const keys = {};
+  const joystick = { x: 0, y: 0 };
 
-    // Wheel axle points along the vehicle's X axis
-    tire.rotation.z = Math.PI / 2;
-    tire.castShadow = true;
-    wheel.add(tire);
+  let sprinting = false;
+  let cameraYaw = 0;
+  let cameraPitch = 0.22;
+  let disposed = false;
 
-    const rim = new THREE.Mesh(
-      new THREE.CylinderGeometry(
-        radius * 0.48,
-        radius * 0.48,
-        type === "car" ? 0.25 : 0.17,
-        12
-      ),
-      bodyMaterial
-    );
+  const normalSpeed = 12;
+  const sprintSpeed = 19;
+  const cameraDistance = 8;
 
-    rim.rotation.z = Math.PI / 2;
-    wheel.add(rim);
+  // ------------------------------------
+  // KEYBOARD CONTROLS
+  // ------------------------------------
 
-    parts.add(wheel);
-    wheels.push(wheel);
+  function onKeyDown(event) {
+    keys[event.code] = true;
 
-    return wheel;
-  }
-
-  if (type === "car") {
-    // Main body
-    addBox(1.9, 0.65, 4.1, bodyMaterial, 0, 0.75, 0);
-
-    // Upper cabin
-    addBox(1.55, 0.85, 2.05, glassMaterial, 0, 1.43, -0.25);
-
-    // Roof
-    addBox(1.58, 0.12, 1.8, bodyMaterial, 0, 1.88, -0.25);
-
-    // Front and rear bumpers
-    addBox(1.95, 0.22, 0.2, darkMaterial, 0, 0.48, 2.05);
-    addBox(1.95, 0.22, 0.2, darkMaterial, 0, 0.48, -2.05);
-
-    // Headlights
-    addBox(0.35, 0.18, 0.08, lightMaterial, -0.62, 0.85, 2.1);
-    addBox(0.35, 0.18, 0.08, lightMaterial, 0.62, 0.85, 2.1);
-
-    // Rear lights
-    addBox(0.35, 0.18, 0.08, rearLightMaterial, -0.62, 0.85, -2.1);
-    addBox(0.35, 0.18, 0.08, rearLightMaterial, 0.62, 0.85, -2.1);
-
-    // Four wheels
-    addWheel(-0.98, 1.3, settings.wheelRadius);
-    addWheel(0.98, 1.3, settings.wheelRadius);
-    addWheel(-0.98, -1.3, settings.wheelRadius);
-    addWheel(0.98, -1.3, settings.wheelRadius);
-
-  } else {
-    // Motorcycle chassis
-    addBox(0.28, 0.42, 1.15, bodyMaterial, 0, 0.9, 0);
-
-    // Fuel tank
-    const tank = new THREE.Mesh(
-      new THREE.SphereGeometry(0.42, 16, 12),
-      bodyMaterial
-    );
-
-    tank.scale.set(0.8, 0.75, 1.1);
-    tank.position.set(0, 1.25, 0.1);
-    parts.add(tank);
-
-    // Seat
-    addBox(0.48, 0.16, 0.72, darkMaterial, 0, 1.35, -0.55);
-
-    // Front fork
-    addBox(0.12, 0.95, 0.12, darkMaterial, 0, 0.8, 0.8);
-
-    // Handlebar
-    addBox(1.05, 0.09, 0.12, darkMaterial, 0, 1.55, 0.78);
-
-    // Front lamp
-    addBox(0.3, 0.3, 0.18, lightMaterial, 0, 1.25, 0.9);
-
-    // Rear light
-    addBox(0.22, 0.14, 0.12, rearLightMaterial, 0, 1.15, -0.9);
-
-    // Motorcycle wheels
-    addWheel(0, 0.95, settings.wheelRadius);
-    addWheel(0, -0.95, settings.wheelRadius);
-  }
-
-  vehicle.position.set(position[0], position[1], position[2]);
-  scene.add(vehicle);
-
-  // Driving input
-  const input = {
-    accelerate: false,
-    brake: false,
-    left: false,
-    right: false
-  };
-
-  let speed = 0;
-  let steering = 0;
-
-  function setInput(nextInput = {}) {
-    for (const key of Object.keys(input)) {
-      if (typeof nextInput[key] === "boolean") {
-        input[key] = nextInput[key];
-      }
+    if (
+      ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"]
+        .includes(event.code)
+    ) {
+      event.preventDefault();
     }
   }
 
-  function resetInput() {
-    for (const key of Object.keys(input)) {
-      input[key] = false;
-    }
+  function onKeyUp(event) {
+    keys[event.code] = false;
   }
+
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+
+  // ------------------------------------
+  // MOBILE CONTROL INTERFACE
+  // ------------------------------------
+
+  const gameScreen = document.getElementById("game-screen");
+
+  const controls = document.createElement("div");
+  controls.id = "gcs-mobile-controls";
+
+  Object.assign(controls.style, {
+    position: "absolute",
+    inset: "0",
+    zIndex: "20",
+    pointerEvents: "none",
+    overflow: "hidden",
+    touchAction: "none"
+  });
+
+  const lookArea = document.createElement("div");
+
+  Object.assign(lookArea.style, {
+    position: "absolute",
+    right: "0",
+    bottom: "0",
+    width: "55%",
+    height: "78%",
+    pointerEvents: "auto",
+    touchAction: "none"
+  });
+
+  const joystickBase = document.createElement("div");
+
+  Object.assign(joystickBase.style, {
+    position: "absolute",
+    left: "25px",
+    bottom: "25px",
+    width: "112px",
+    height: "112px",
+    borderRadius: "50%",
+    background: "rgba(12, 20, 30, 0.48)",
+    border: "2px solid rgba(255,255,255,0.5)",
+    pointerEvents: "auto",
+    touchAction: "none"
+  });
+
+  const joystickKnob = document.createElement("div");
+
+  Object.assign(joystickKnob.style, {
+    position: "absolute",
+    width: "48px",
+    height: "48px",
+    left: "30px",
+    top: "30px",
+    borderRadius: "50%",
+    background: "rgba(225, 190, 125, 0.9)",
+    border: "2px solid rgba(255,255,255,0.8)",
+    boxShadow: "0 3px 12px rgba(0,0,0,0.4)",
+    pointerEvents: "none"
+  });
+
+  joystickBase.appendChild(joystickKnob);
+
+  const sprintButton = document.createElement("button");
+  sprintButton.textContent = "SPRINT";
+
+  Object.assign(sprintButton.style, {
+    position: "absolute",
+    right: "28px",
+    bottom: "32px",
+    width: "82px",
+    height: "54px",
+    borderRadius: "12px",
+    border: "1px solid rgba(255,255,255,0.7)",
+    background: "rgba(15, 25, 38, 0.78)",
+    color: "#ffffff",
+    fontWeight: "800",
+    fontSize: "12px",
+    letterSpacing: "1px",
+    pointerEvents: "auto",
+    touchAction: "none"
+  });
+
+  controls.appendChild(lookArea);
+  controls.appendChild(joystickBase);
+  controls.appendChild(sprintButton);
+
+  if (gameScreen) {
+    gameScreen.appendChild(controls);
+  }
+
+  // ------------------------------------
+  // JOYSTICK INPUT
+  // ------------------------------------
+
+  let joystickPointer = null;
+
+  function updateJoystick(event) {
+    const rect = joystickBase.getBoundingClientRect();
+
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    let dx = event.clientX - centerX;
+    let dy = event.clientY - centerY;
+
+    const maxDistance = 38;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance > maxDistance) {
+      dx = (dx / distance) * maxDistance;
+      dy = (dy / distance) * maxDistance;
+    }
+
+    joystick.x = dx / maxDistance;
+    joystick.y = dy / maxDistance;
+
+    joystickKnob.style.transform =
+      `translate(${dx}px, ${dy}px)`;
+  }
+
+  function resetJoystick() {
+    joystickPointer = null;
+    joystick.x = 0;
+    joystick.y = 0;
+    joystickKnob.style.transform = "translate(0px, 0px)";
+  }
+
+  joystickBase.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+
+    joystickPointer = event.pointerId;
+    joystickBase.setPointerCapture(event.pointerId);
+
+    updateJoystick(event);
+  });
+
+  joystickBase.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== joystickPointer) return;
+    updateJoystick(event);
+  });
+
+  joystickBase.addEventListener("pointerup", (event) => {
+    if (event.pointerId === joystickPointer) resetJoystick();
+  });
+
+  joystickBase.addEventListener("pointercancel", resetJoystick);
+
+  // ------------------------------------
+  // CAMERA LOOK CONTROL
+  // ------------------------------------
+
+  let lookPointer = null;
+  let lastLookX = 0;
+  let lastLookY = 0;
+
+  lookArea.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+
+    lookPointer = event.pointerId;
+    lastLookX = event.clientX;
+    lastLookY = event.clientY;
+
+    lookArea.setPointerCapture(event.pointerId);
+  });
+
+  lookArea.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== lookPointer) return;
+
+    const deltaX = event.clientX - lastLookX;
+    const deltaY = event.clientY - lastLookY;
+
+    cameraYaw -= deltaX * 0.006;
+    cameraPitch += deltaY * 0.003;
+
+    cameraPitch = THREE.MathUtils.clamp(
+      cameraPitch,
+      -0.05,
+      0.65
+    );
+
+    lastLookX = event.clientX;
+    lastLookY = event.clientY;
+  });
+
+  function resetLook() {
+    lookPointer = null;
+  }
+
+  lookArea.addEventListener("pointerup", resetLook);
+  lookArea.addEventListener("pointercancel", resetLook);
+
+  // ------------------------------------
+  // SPRINT BUTTON
+  // ------------------------------------
+
+  sprintButton.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    sprinting = true;
+    sprintButton.style.background = "rgba(170, 125, 65, 0.95)";
+  });
+
+  function stopSprint() {
+    sprinting = false;
+    sprintButton.style.background = "rgba(15, 25, 38, 0.78)";
+  }
+
+  sprintButton.addEventListener("pointerup", stopSprint);
+  sprintButton.addEventListener("pointercancel", stopSprint);
+  sprintButton.addEventListener("lostpointercapture", stopSprint);
+
+  // ------------------------------------
+  // GAME UPDATE
+  // ------------------------------------
+
+  const cameraTarget = new THREE.Vector3();
 
   function update(delta) {
-    const dt = Math.min(delta, 0.05);
+    if (disposed) return;
 
-    // Acceleration and braking
-    if (input.accelerate) {
-      speed += settings.acceleration * dt;
-    } else if (input.brake) {
-      if (speed > 0.5) {
-        speed -= settings.acceleration * 2 * dt;
-      } else {
-        speed -= settings.acceleration * 0.6 * dt;
-      }
-    } else {
-      // Natural slowdown
-      speed *= Math.max(0, 1 - 1.4 * dt);
+    const forward =
+      keys.KeyW || keys.ArrowUp ? 1 :
+      keys.KeyS || keys.ArrowDown ? -1 : 0;
+
+    const sideways =
+      keys.KeyD || keys.ArrowRight ? 1 :
+      keys.KeyA || keys.ArrowLeft ? -1 : 0;
+
+    let inputX = sideways + joystick.x;
+    let inputY = -forward + joystick.y;
+
+    const inputLength = Math.hypot(inputX, inputY);
+
+    if (inputLength > 1) {
+      inputX /= inputLength;
+      inputY /= inputLength;
     }
 
-    speed = THREE.MathUtils.clamp(
-      speed,
-      -settings.reverseSpeed,
-      settings.maxSpeed
-    );
+    const forwardX = Math.sin(cameraYaw);
+    const forwardZ = -Math.cos(cameraYaw);
 
-    // Steering
-    const steeringInput =
-      Number(input.right) - Number(input.left);
+    const rightX = Math.cos(cameraYaw);
+    const rightZ = Math.sin(cameraYaw);
 
-    steering = THREE.MathUtils.damp(
-      steering,
-      steeringInput,
-      5,
-      dt
-    );
+    const moveX =
+      rightX * inputX + forwardX * -inputY;
 
-    const speedFactor = Math.min(
-      1,
-      Math.abs(speed) / 8
-    );
+    const moveZ =
+      rightZ * inputX + forwardZ * -inputY;
 
-    vehicle.rotation.y +=
-      steering *
-      settings.turnSpeed *
-      speedFactor *
-      dt *
-      Math.sign(speed || 1);
+    const moving = Math.hypot(moveX, moveZ) > 0.01;
 
-    // Move vehicle forward or backward
-    vehicle.position.x +=
-      Math.sin(vehicle.rotation.y) * speed * dt;
+    if (moving) {
+      const speed =
+        sprinting || keys.ShiftLeft
+          ? sprintSpeed
+          : normalSpeed;
 
-    vehicle.position.z +=
-      Math.cos(vehicle.rotation.y) * speed * dt;
+      player.position.x += moveX * speed * delta;
+      player.position.z += moveZ * speed * delta;
 
-    // Rotate wheels while moving
-    for (const wheel of wheels) {
-      wheel.rotation.x +=
-        speed * dt / settings.wheelRadius;
+      player.rotation.y = Math.atan2(moveX, moveZ);
     }
+
+    // THIRD-PERSON CAMERA
+    const horizontalDistance =
+      cameraDistance * Math.cos(cameraPitch);
+
+    cameraTarget.set(
+      player.position.x + Math.sin(cameraYaw) * horizontalDistance,
+      player.position.y + 3.2 + cameraDistance * Math.sin(cameraPitch),
+      player.position.z + Math.cos(cameraYaw) * horizontalDistance
+    );
+
+    camera.position.lerp(
+      cameraTarget,
+      Math.min(1, delta * 5)
+    );
+
+    camera.lookAt(
+      player.position.x,
+      player.position.y + 1.3,
+      player.position.z
+    );
   }
 
+  // ------------------------------------
+  // CLEANUP
+  // ------------------------------------
+
   function dispose() {
-    resetInput();
-    scene.remove(vehicle);
+    disposed = true;
 
-    vehicle.traverse((object) => {
-      if (object.geometry) {
-        object.geometry.dispose();
-      }
+    window.removeEventListener("keydown", onKeyDown);
+    window.removeEventListener("keyup", onKeyUp);
 
-      if (object.material) {
-        if (Array.isArray(object.material)) {
-          object.material.forEach((material) => material.dispose());
-        } else {
-          object.material.dispose();
-        }
-      }
-    });
+    controls.remove();
+
+    body.geometry.dispose();
+    body.material.dispose();
+
+    head.geometry.dispose();
+    head.material.dispose();
+
+    legs.geometry.dispose();
+    legs.material.dispose();
+
+    skinMaterial.dispose();
+
+    scene.remove(player);
   }
 
   return {
-    vehicle,
-    get speed() {
-      return speed;
-    },
-    setInput,
-    resetInput,
+    player,
     update,
     dispose
   };
-      }
+}
+   
